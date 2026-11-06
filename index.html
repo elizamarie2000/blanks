@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blanks</title>
+<meta name="description" content="Take turns choosing a word for your friend to fill in, one letter at a time.">
+<style>
+@font-face { font-family: "Courier Prime"; src: url("CourierPrime.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Courier Prime"; src: url("CourierPrime-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+:root {
+  --paper: #f8f6f1; --ink: #1c1b19; --soft: #6e6b64; --hair: #d9d5cb; --tint: #ebe7dd; --ribbon: #b3261e;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0; min-height: 100dvh; background: var(--paper); color: var(--ink); overflow-x: hidden;
+  font: 16px/1.5 "Courier Prime", "Courier New", Courier, monospace;
+}
+main { max-width: 860px; margin: 0 auto; padding: 40px 20px 56px; }
+h1, h2 { font-weight: 400; margin: 0; }
+h1 { font-size: clamp(38px, 9vw, 56px); line-height: 1.1; letter-spacing: -.02em; }
+h1::after { content: ""; display: inline-block; width: .5em; height: .08em; margin-left: .1em; background: var(--ribbon); animation: blink 1.2s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+h2 { font-size: 26px; line-height: 1.2; letter-spacing: -.01em; }
+h3 { margin: 0 0 8px; font-size: 13px; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+p { margin: 0; color: var(--soft); }
+.screen { display: none; }
+.screen.on { display: block; }
+.stack { max-width: 400px; margin: 14vh auto 0; display: grid; gap: 34px; }
+.stack > div { display: grid; gap: 10px; }
+.card { display: grid; gap: 14px; }
+.stack > .card + .card { border-top: 1px solid var(--hair); padding-top: 28px; }
+label { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); display: grid; gap: 4px; }
+input {
+  width: 100%; padding: 8px 0; font: inherit; font-size: 18px; letter-spacing: 0; text-transform: none; color: var(--ink);
+  background: none; border: 0; border-bottom: 1px solid var(--ink); border-radius: 0; outline: none;
+}
+input::placeholder { color: #b0aca2; }
+input:focus { border-bottom-width: 2px; margin-bottom: -1px; }
+input#codeIn { text-transform: uppercase; letter-spacing: .08em; }
+input.word { font-size: 32px; line-height: 1.2; letter-spacing: .3em; text-transform: uppercase; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn {
+  padding: 11px 18px; border: 1px solid var(--ink); border-radius: 0; background: none; color: var(--ink);
+  font-size: 13px; letter-spacing: .1em; text-transform: uppercase; transition: background .15s, color .15s;
+}
+.btn:hover:not(:disabled), .btn.main { background: var(--ink); color: var(--paper); }
+.btn.main:hover:not(:disabled) { background: #3a3834; }
+.btn:disabled { opacity: .35; cursor: default; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row .grow { flex: 1 1 auto; }
+.err { color: var(--ribbon); min-height: 1.5em; font-size: 14px; }
+.code { font-size: clamp(38px, 11vw, 52px); line-height: 1.1; text-align: center; padding: 14px 0; letter-spacing: .04em; user-select: all; }
+.pulse { animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .5; } }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--ink); margin-bottom: 18px; }
+.side { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--soft); }
+.link { background: none; border: 0; padding: 2px 0; color: var(--soft); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.dot { display: inline-block; width: 6px; height: 6px; background: var(--ink); margin-right: 8px; vertical-align: 1px; }
+.dot.off { background: var(--ribbon); }
+
+.status { margin: 0 0 26px; min-height: 26px; color: var(--soft); }
+.status.mine { color: var(--ink); }
+.status.lost { color: var(--ribbon); }
+.choose { max-width: 400px; margin: 7vh auto 0; display: grid; gap: 16px; }
+.guess { display: flex; gap: 10px; align-items: end; margin-bottom: 4px; }
+.guess input { flex: 1 1 auto; min-width: 0; font-size: 22px; letter-spacing: .14em; }
+.alpha { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 4px; max-width: 560px; }
+.alpha button { aspect-ratio: 1; padding: 0; border: 1px solid transparent; background: none; color: var(--ink); font-size: 18px; line-height: 1; }
+.alpha button:hover:not(:disabled) { background: var(--tint); }
+.score { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-bottom: 30px; }
+.blanks { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(4px, 1.6vw, 12px); margin-bottom: 12px; }
+.blanks span { width: clamp(20px, 6vw, 44px); border-bottom: 2px solid var(--ink); text-align: center; font-size: clamp(24px, 7vw, 40px); line-height: 1.3; min-height: 1.3em; }
+.blanks .ghost { color: #b0aca2; }
+.hint, .lives { text-align: center; }
+.lives { margin: 8px 0 30px; color: var(--ink); letter-spacing: .08em; }
+.lives i { font-style: normal; color: var(--ribbon); letter-spacing: .2em; }
+.alpha { margin: 0 auto 26px; }
+.alpha .good { color: var(--ink); font-weight: 700; border-color: var(--ink); }
+.alpha .bad { color: #b0aca2; text-decoration: line-through; text-decoration-color: var(--ribbon); }
+.alpha button:disabled { cursor: default; background: none; }
+#guessPanel, #setterPanel { max-width: 560px; margin: 0 auto; }
+.tried { letter-spacing: .2em; color: var(--ink); min-height: 1.5em; }
+.rules { font-size: 13px; }
+#end { position: fixed; inset: 0; display: none; place-items: center; padding: 20px; background: #f8f6f1e8; z-index: 5; }
+#end.on { display: grid; }
+#end .card { max-width: 340px; width: 100%; text-align: center; background: var(--paper); border: 1px solid var(--ink); padding: 30px 26px; }
+@media (max-width: 720px) {
+  main { padding: 24px 16px 40px; }
+  .stack { margin-top: 8vh; }
+  .alpha { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="screen on" id="home">
+    <div class="stack">
+      <div>
+        <h1>Blanks</h1>
+        <p>Take turns choosing a word, then fill in your friend's, one letter at a time.</p>
+      </div>
+      <div class="card">
+        <label>Your name <input id="nameIn" maxlength="16" autocomplete="off" placeholder="Type your name"></label>
+        <button class="btn main" id="hostBtn">Start a room</button>
+      </div>
+      <div class="card">
+        <label>Room code <input id="codeIn" maxlength="12" autocomplete="off" placeholder="QUILL-42"></label>
+        <button class="btn" id="joinBtn">Join your friend</button>
+        <p class="err" id="homeErr" role="alert"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="wait">
+    <div class="stack">
+      <div>
+        <h2 id="waitTitle">Your room is ready</h2>
+        <p>Send this code to your friend.</p>
+      </div>
+      <div class="card">
+        <div class="code" id="codeOut"></div>
+        <button class="btn" id="copyBtn">Copy invite link</button>
+      </div>
+      <p class="pulse" id="waitNote">Waiting for your friend to arrive…</p>
+      <button class="link" data-leave>Leave</button>
+    </div>
+  </section>
+
+  <section class="screen" id="pick">
+    <div class="top"><h2>Choose a word</h2><div class="side" data-conn></div></div>
+    <div class="choose">
+      <p id="pickIntro"></p>
+      <label>Your word <input class="word" id="secretIn" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <label>A hint, if you'd like <input id="hintIn" maxlength="40" autocomplete="off" placeholder="Something to eat"></label>
+      <p class="err" id="pickErr" role="alert"></p>
+      <div class="row">
+        <button class="btn grow" id="surpriseBtn">Surprise me</button>
+        <button class="btn main grow" id="readyBtn">Ready</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="waiting">
+    <div class="top"><h2>Blanks</h2><div class="side" data-conn></div></div>
+    <div class="choose"><p class="pulse" id="waitingNote"></p></div>
+  </section>
+
+  <section class="screen" id="play">
+    <div class="top"><h2>Blanks</h2><div class="side"><span data-conn></span><button class="link" id="soundBtn"></button></div></div>
+    <p class="status" id="status" role="status"></p>
+    <div class="score"><span id="myScore"></span><span id="foeScore"></span></div>
+    <div class="blanks" id="blanks" aria-label="The word so far"></div>
+    <p class="hint" id="hint"></p>
+    <p class="lives" id="lives"></p>
+    <div id="guessPanel">
+      <div class="alpha" id="alpha"></div>
+      <form class="guess" id="wordForm">
+        <label style="flex:1 1 auto;min-width:0">Know the word? <input class="word" id="guessIn" maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+        <button class="btn" id="sendBtn">Guess</button>
+      </form>
+      <p class="err" id="guessErr" role="alert"></p>
+      <p class="rules">A wrong word costs one try. Solve it for a point per try left. If you run out, your friend scores 3.</p>
+    </div>
+    <div id="setterPanel">
+      <h3>Letters tried</h3>
+      <p class="tried" id="tried"></p>
+    </div>
+  </section>
+</main>
+
+<div id="end" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+  <div class="card">
+    <h2 id="endTitle"></h2>
+    <p id="endNote"></p>
+    <button class="btn main" id="againBtn">Next round</button>
+    <button class="link" id="lookBtn">Look at the page</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
